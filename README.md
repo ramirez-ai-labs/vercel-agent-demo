@@ -1,30 +1,43 @@
 # sandbox-agent-demo
 
-A focused demo of the **Vercel AI SDK** and **Sandbox**: describe a coding task, the model generates a self-contained script (Node.js or Python), and it runs isolated in a Firecracker microVM instead of on the request-handling server. Progress and output stream back to the browser as events.
+**The worked example that didn't exist.** 
 
-**Free tier compatible** — works with zero-cost AI Gateway models. No billing required to try it.
+There's no canonical example showing AI SDK output feeding directly into Sandbox execution. This is that example — built, tested, documented, and shipped with a friction log.
 
-Showcases:
-- **AI SDK** code generation with free tier models via manual JSON parsing
-- **Sandbox** infrastructure-level isolation and lifecycle management
-- **Streaming events** with a custom NDJSON protocol (not SSE/useChat)
-- **Production thinking** (cost awareness, tight timeouts, security model)
+A developer describes a coding task → AI SDK generates a self-contained script → Sandbox executes it isolated in a Firecracker microVM → results stream back to the browser.
 
-Built as a companion to [`trustclaw-jfrog-demo`](https://github.com/vhr1975/trustclaw-jfrog-demo) — same "generate → execute → report" pattern on different infrastructure.
+**Who this is for:**
+- Developers who've used AI SDK or Sandbox separately and want to see them connected
+- Educators/DevRel building curriculum around agentic infrastructure
+- Engineers building on Vercel's AI stack
 
-## How It Works
+**What you'll find:**
+- A worked end-to-end example (not a tutorial, not a reference architecture — a real app)
+- Honest guardrails and limitations (what works, what doesn't, why)
+- A friction log (the rough edges I hit so you don't have to re-hit them)
+- Tests at every layer (unit, integration, E2E) so you can fork and iterate
+- Clear deployment path, cost breakdown, and security model
 
-A complete flow in under 60 seconds:
+Built as a companion to [`trustclaw-jfrog-demo`](https://github.com/vhr1975/trustclaw-jfrog-demo) — different infrastructure, same "generate → execute → report" pattern.
+
+## How It Works (Walkthrough)
+
+Step-by-step, with real code references:
 
 1. **You write a prompt** in the browser (e.g., "Generate 1000 random numbers and find the mean")
-2. **Model generates code** — `generateText` with AI Gateway (free tier)
-3. **Response parsed** — extract `{language, filename, code, summary}` from JSON
-4. **Sandbox spins up** — Vercel launches a Firecracker microVM
-5. **Script is written** → runs → output captured
-6. **Results stream back** as NDJSON events (status → code → result → done)
-7. **Browser renders** each event as it arrives
+2. **`app/page.tsx`** → POSTs to `/api/agent`
+3. **`app/api/agent/route.ts`** → calls `generateText()` via AI Gateway
+   - System prompt asks for JSON: `{"language":"node"|"python","filename":"...","code":"...","summary":"..."}`
+   - Model returns plain text; route parses with `JSON.parse()` and validates with Zod
+   - **Why manual parsing instead of `generateObject`?** Structured output is expensive; free tier models only do plain text
+4. **Sandbox is created** — `Sandbox.create({ runtime: "node24", timeout: 30_000, persistent: false })`
+   - `persistent: false` because each run is one-off (this was friction log entry #1)
+5. **Script is written** to the sandbox's `/tmp`, executed via `runCommand()`
+6. **Output is captured** — exitCode, stdout, stderr
+7. **Results stream back** as NDJSON events (status → code → result → done)
+8. **`app/page.tsx` parses events** (lines 47–65) and renders them live
 
-The entire flow is observable in your browser console. See `app/page.tsx` lines 47–65 for the event-parsing logic.
+**Observable in your browser console** — every event is logged as it arrives. This is the feedback loop you need when building agents.
 
 ## Architecture Diagram
 
@@ -142,13 +155,25 @@ User prompt → Model generates script → script runs in isolated Firecracker m
 
 This is the key difference from trustclaw: trustclaw runs code on a separate serverless function (isolation via request boundary); sandbox runs it in a true microVM (Firecracker), which is stronger isolation.
 
-## Why Manual JSON Parsing (Not generateObject)
+## Design Choice: Manual JSON Parsing (Not generateObject)
 
-`generateObject` requires expensive structured-output models (GPT-4, Claude Opus). Since this demo runs on the **free tier**, we use `generateText` instead and parse the JSON manually:
+This example uses `generateText` + manual `JSON.parse()` instead of `generateObject`. Why that matters for learning:
 
-- **Model** generates plain JSON via system prompt
-- **Route** parses with `JSON.parse()`, validates with Zod
-- **Trade-off**: Simpler mental model (one code path), works on free tier — but requires trusting the model to return valid JSON (it usually does; errors are caught and streamed back as error events)
+**`generateObject` (the "right" way for production):**
+- Requires expensive models (GPT-4, Claude Opus, etc.)
+- Guarantees schema compliance at generation time
+- Better for production systems that can't afford parsing failures
+
+**Manual parsing (this example):**
+- Works with free-tier models (Claude 3.5 Haiku, etc.)
+- Shows you what schema validation looks like (Zod checks the parsed JSON)
+- Teaches error handling — if the model returns invalid JSON, you see it (error event is streamed back)
+- **The trade-off:** You're trusting the model's system prompt; in production, you'd use structured output
+
+**Why this approach is better for a worked example:**
+- Everyone can run it without hitting a paywall
+- You see the full error path (parsing failures, validation errors) — which is the part the docs usually skip
+- It's honest about the frontier: "LLM outputs aren't always perfect, here's how you handle that"
 
 ## Setup (Zero-Cost Local Development)
 
