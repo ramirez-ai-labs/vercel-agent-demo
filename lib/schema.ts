@@ -11,6 +11,7 @@ export const scriptSchema = z.object({
     .describe("Runtime to execute the script with."),
   filename: z
     .string()
+    .min(1, 'Filename cannot be empty')
     .describe('File name including extension, e.g. "script.js" or "script.py".'),
   code: z.string().describe("The complete, self-contained script."),
   summary: z

@@ -189,7 +189,7 @@ describe('/api/agent route', () => {
   it('cleans up sandbox on error', async () => {
     const { Sandbox } = await import('@vercel/sandbox');
 
-    const stopFn = vi.fn();
+    const stopFn = vi.fn().mockResolvedValueOnce(undefined);
     vi.mocked(Sandbox.create).mockResolvedValueOnce({
       writeFiles: vi.fn().mockRejectedValueOnce(new Error('Write failed')),
       runCommand: vi.fn(),
