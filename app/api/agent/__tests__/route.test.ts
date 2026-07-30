@@ -7,7 +7,7 @@ vi.mock('@vercel/sandbox', () => ({
 }));
 
 vi.mock('ai', () => ({
-  generateObject: vi.fn(),
+  generateText: vi.fn(),
 }));
 
 describe('/api/agent route', () => {
@@ -71,16 +71,16 @@ describe('/api/agent route', () => {
   });
 
   it('returns stream with correct content-type', async () => {
-    const { generateObject } = await import('ai');
+    const { generateText } = await import('ai');
     const { Sandbox } = await import('@vercel/sandbox');
 
-    vi.mocked(generateObject).mockResolvedValueOnce({
-      object: {
+    vi.mocked(generateText).mockResolvedValueOnce({
+      text: JSON.stringify({
         language: 'node',
         filename: 'test.js',
         code: 'console.log("test");',
         summary: 'Test script',
-      },
+      }),
     } as any);
 
     vi.mocked(Sandbox.create).mockResolvedValueOnce({
@@ -106,16 +106,16 @@ describe('/api/agent route', () => {
   });
 
   it('streams status events', async () => {
-    const { generateObject } = await import('ai');
+    const { generateText } = await import('ai');
     const { Sandbox } = await import('@vercel/sandbox');
 
-    vi.mocked(generateObject).mockResolvedValueOnce({
-      object: {
+    vi.mocked(generateText).mockResolvedValueOnce({
+      text: JSON.stringify({
         language: 'node',
         filename: 'test.js',
         code: 'console.log("hello");',
         summary: 'Print hello',
-      },
+      }),
     } as any);
 
     vi.mocked(Sandbox.create).mockResolvedValueOnce({
@@ -158,9 +158,9 @@ describe('/api/agent route', () => {
   });
 
   it('emits error event on model failure', async () => {
-    const { generateObject } = await import('ai');
+    const { generateText } = await import('ai');
 
-    vi.mocked(generateObject).mockRejectedValueOnce(new Error('Model error'));
+    vi.mocked(generateText).mockRejectedValueOnce(new Error('Model error'));
 
     const { POST } = await import('../route');
     const request = new Request('http://localhost/api/agent', {
@@ -196,14 +196,14 @@ describe('/api/agent route', () => {
       stop: stopFn,
     } as any);
 
-    const { generateObject } = await import('ai');
-    vi.mocked(generateObject).mockResolvedValueOnce({
-      object: {
+    const { generateText } = await import('ai');
+    vi.mocked(generateText).mockResolvedValueOnce({
+      text: JSON.stringify({
         language: 'node',
         filename: 'test.js',
         code: 'console.log("test");',
         summary: 'Test',
-      },
+      }),
     } as any);
 
     const { POST } = await import('../route');
