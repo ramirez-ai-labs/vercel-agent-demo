@@ -33,7 +33,7 @@ export async function POST(request: Request) {
         send({ type: "status", message: "Asking the model to write a script…" });
 
         const { object } = await generateObject({
-          model: process.env.AI_MODEL ?? "inclusionai/ling-3.0-flash-free",
+          model: process.env.AI_MODEL ?? "openai/gpt-4o-mini",
           schema: scriptSchema,
           system: [
             "You write small, self-contained scripts that fulfil the user's coding request.",
