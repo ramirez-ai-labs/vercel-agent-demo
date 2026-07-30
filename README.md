@@ -150,32 +150,42 @@ This is the key difference from trustclaw: trustclaw runs code on a separate ser
 - **Route** parses with `JSON.parse()`, validates with Zod
 - **Trade-off**: Simpler mental model (one code path), works on free tier — but requires trusting the model to return valid JSON (it usually does; errors are caught and streamed back as error events)
 
-## Setup
+## Setup (Zero-Cost Local Development)
 
-**Prerequisites:** Node 20+, npm. Sign up for a free Vercel account (https://vercel.com).
+**Prerequisites:** Node 20+, npm. No credit card required.
 
 ```bash
 npm install
 cp .env.example .env.local
 ```
 
-**Get your free AI Gateway key:**
-1. Go to https://vercel.com/dashboard/ai-gateway
-2. Click **Create Token** (or use an existing one)
-3. Copy the token and set it in `.env.local`:
+**Step 1: Get AI Gateway key (free tier)**
+1. Sign up for free at https://vercel.com (no card)
+2. Go to https://vercel.com/dashboard/ai-gateway
+3. Click **Create Token**
+4. Copy and paste into `.env.local`:
    ```bash
-   AI_GATEWAY_API_KEY=<your_token>
+   AI_GATEWAY_API_KEY=<your_free_token>
    ```
-4. No credit card needed for free tier (rate-limited to 10 requests/day)
+   Rate limit: 10 requests/day (free tier). Perfect for local testing.
 
-**For Sandbox auth locally:**
+**Step 2: Link repo to Vercel (for Sandbox auth)**
 ```bash
-vercel link       # Link your repo to a Vercel project (one-time)
-vercel env pull   # Pull dev OIDC token into .env.local (expires in 12 hours)
-npm run dev       # Start the dev server
+npm install -g vercel  # one-time global install
+vercel link            # link this repo to a Vercel project (interactive)
+vercel env pull        # pull OIDC credentials into .env.local
 ```
 
-The OIDC token is temporary; if it expires, re-run `vercel env pull`. On production Vercel, the SDK authenticates automatically via OIDC.
+**Step 3: Start dev server**
+```bash
+npm run dev
+```
+
+Open http://localhost:3000, type a prompt, and watch it generate and execute code — all running locally with **zero cost**.
+
+**OIDC token validity:** The token expires after 12 hours. If it expires, just re-run `vercel env pull` to get a fresh one.
+
+**Production deployment:** This is where Sandbox costs kick in (see Cost Breakdown section above). For local-only testing, you're completely free.
 
 ## Deploying
 
@@ -191,13 +201,24 @@ Then set `AI_GATEWAY_API_KEY` in your Vercel project environment variables:
 
 No Sandbox-specific env vars needed — the SDK authenticates via OIDC automatically.
 
-**Cost Estimate:**
-- **Free tier:** $0 (10 requests/day limit on AI Gateway)
-- **100 runs/month:** ~$1–3 total (AI Gateway ~$0.01/run + Sandbox ~$0.01–0.05/run)
-- **Hobby plan minimum:** $5/month (includes higher AI Gateway quota and Sandbox alloc)
-- **Pro plan:** $20/month
+**Cost Breakdown by Plan:**
 
-See https://vercel.com/pricing for Sandbox and AI Gateway pricing details.
+| Component | Free Tier | Hobby ($5/mo) | Pro ($20/mo) |
+|-----------|-----------|---------------|--------------|
+| **Hosting** | ✅ Included | ✅ Included | ✅ Included |
+| **AI Gateway** | ✅ 10 requests/day | ✅ Higher quota | ✅ Higher quota |
+| **Sandbox** | ❓ Limited/unclear | ✅ Yes (~$0.01–0.05/run) | ✅ Yes (~$0.01–0.05/run) |
+| **Sandbox timeout** | N/A | 45 min max | 24 hours max |
+| **Function timeout** | 10s max | 15s–60s | 15s–900s |
+
+**⚠️ If you want to pay nothing:**
+- You can run the **demo locally** (dev mode) for free using Vercel's OIDC token
+- **Deployed to production:** Sandbox support on free tier is unclear — assume you need Hobby plan ($5/mo) to guarantee Sandbox works
+- **AI Gateway:** Free tier includes 10 requests/day at no cost
+
+**Recommendation:** Test locally first with `npm run dev`. If deploying to production without paying, contact Vercel support to confirm Sandbox availability on free tier.
+
+See https://vercel.com/pricing for the official Sandbox/AI Gateway pricing and plan limits.
 
 ## Security & Guardrails
 
