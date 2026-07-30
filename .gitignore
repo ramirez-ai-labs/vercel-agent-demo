@@ -6,3 +6,4 @@ node_modules
 *.log
 playwright-report
 .playwright
+.env*.local
