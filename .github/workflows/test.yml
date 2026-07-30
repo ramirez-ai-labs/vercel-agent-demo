@@ -18,7 +18,10 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
+        # Note: React 19 compatibility in @testing-library/react is still in progress.
+        # Using --legacy-peer-deps is a temporary workaround until Testing Library
+        # releases official React 19 support. See: https://github.com/testing-library/react-testing-library/discussions
 
       - name: Lint
         run: npm run lint
