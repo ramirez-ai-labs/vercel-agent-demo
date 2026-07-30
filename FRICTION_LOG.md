@@ -27,7 +27,15 @@ That's a real DevRel gap: this repo itself could become that example.
 Both need credentials; document whether OIDC alone covers both in a single deployed
 route or whether you hit a snag needing separate tokens.
 
-## 5. [Add after live deploy] First real failure case
+## 5. React 19 + Testing Library peer dependency conflict
+`@testing-library/react` (v14 and v15) declares `react@^18.0.0` as a peer dependency,
+but this project uses React 19. No version of Testing Library has officially released
+React 19 support yet. Workaround: use `npm install --legacy-peer-deps` in CI and dev.
+**Ticket to track:** https://github.com/testing-library/react-testing-library/discussions/1370
+
+Note: This will resolve itself once Testing Library ships official React 19 support (likely v15.1 or v16).
+
+## 6. [Add after live deploy] First real failure case
 Note the first time the model generates something that fails inside the sandbox —
 non-zero exit, unexpected stderr, or a runtime the schema didn't account for. What did
 the error surface look like on the client, and was it enough to debug from?
