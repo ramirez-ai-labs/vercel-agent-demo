@@ -30,21 +30,31 @@ The entire flow is observable in your browser console. See `app/page.tsx` lines 
 
 ```mermaid
 graph LR
-    User["👤 Browser (you)"]
-    UI["app/page.tsx<br/>(React + streaming)"]
+    User["👤 Browser<br/>(you)"]
+    UI["app/page.tsx<br/>(React)"]
     API["app/api/agent/route.ts<br/>(orchestration)"]
-    Model["AI Gateway<br/>(Claude/GPT-4)"]
-    SB["Vercel Sandbox<br/>(Firecracker)"]
+    Gateway["🔀 AI Gateway<br/>(cost + routing)"]
+    Model["Claude/GPT-4"]
+    Sandbox["🔒 Vercel Sandbox<br/>(Firecracker microVM)"]
     
     User -->|prompt| UI
     UI -->|POST /api/agent| API
-    API -->|generateText| Model
-    Model -->|JSON script| API
-    API -->|create + write + run| SB
-    SB -->|exit code + stdout + stderr| API
+    API -->|generateText<br/>+ AI_GATEWAY_API_KEY| Gateway
+    Gateway -->|proxy| Model
+    Model -->|JSON script| Gateway
+    Gateway -->|result| API
+    API -->|create<br/>write<br/>runCommand| Sandbox
+    Sandbox -->|exit code<br/>stdout<br/>stderr| API
     API -->|NDJSON events| UI
-    UI -->|live status + output| User
+    UI -->|status + output| User
+    
+    style Gateway fill:#f9f,stroke:#333,stroke-width:2px
+    style Sandbox fill:#bbf,stroke:#333,stroke-width:2px
 ```
+
+**Key components:**
+- **AI Gateway** (magenta): Unified LLM API endpoint — handles auth, routing, cost tracking
+- **Sandbox** (blue): Isolated microVM for executing untrusted scripts
 
 ## Event Streaming (NDJSON)
 
@@ -85,6 +95,52 @@ graph TB
     Sandbox --> Allowed
     Sandbox --> Blocked
 ```
+
+## The Two Critical Vercel Pieces
+
+### 1. AI Gateway: Why Route Through It?
+
+**What it is:** A unified API proxy that sits between your app and model providers (Claude, GPT-4, etc.).
+
+**Why use it instead of calling Claude/OpenAI directly:**
+- **Cost optimization** — batches requests, handles retries, picks cheapest models per task
+- **Rate limiting & quotas** — free tier (10 requests/day), scales to Hobby/Pro
+- **Unified token management** — one `AI_GATEWAY_API_KEY` works across providers
+- **Model routing** — can swap models without code changes (`AI_MODEL` env var)
+- **Observability** — logs all requests in Vercel dashboard for cost tracking
+
+**How this app uses it:**
+- Route calls `generateText({ model: process.env.AI_MODEL ?? "inclusionai/ling-3.0-flash-free" })`
+- The token in `.env.local` / production env vars is the gateway key
+- All LLM calls flow through AI Gateway, not directly to Claude/OpenAI APIs
+
+### 2. Sandbox: Why Isolate Script Execution?
+
+**The problem it solves:**
+Without the Sandbox, running arbitrary user-generated code would execute **on your server**:
+```
+User prompt → Model generates script → script runs on your Node.js process
+```
+Risk: Malicious prompt → malicious script → compromised server (network access, env var theft, filesystem damage).
+
+**The Sandbox solution:**
+```
+User prompt → Model generates script → script runs in isolated Firecracker microVM
+```
+
+**Why that matters:**
+- **Resource isolation** — runaway script (infinite loop) is contained; can't crash the main server
+- **Filesystem isolation** — generated script can't read `/etc/passwd` or your source code
+- **Network isolation** — script can't reach internal services, steal API keys, or exfil data
+- **Lifecycle management** — Vercel automatically provisions and tears down the microVM (no cleanup overhead)
+
+**How this app uses it:**
+- `app/api/agent/route.ts` line 80–84: `Sandbox.create({ runtime: "node24", timeout: 30_000, persistent: false })`
+- Writes the generated script to the sandbox's `/tmp`
+- Runs it: `sandbox.runCommand({ cmd: "node", args: ["script.js"] })`
+- Captures stdout/stderr and kills the VM when done
+
+This is the key difference from trustclaw: trustclaw runs code on a separate serverless function (isolation via request boundary); sandbox runs it in a true microVM (Firecracker), which is stronger isolation.
 
 ## Why Manual JSON Parsing (Not generateObject)
 
