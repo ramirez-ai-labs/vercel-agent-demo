@@ -1,6 +1,7 @@
-import { generateObject } from "ai";
+import { generateText } from "ai";
 import { Sandbox } from "@vercel/sandbox";
 import { scriptSchema, type AgentEvent } from "@/lib/schema";
+import { z } from "zod";
 
 // Sandbox creation + install + run can take longer than the default
 // serverless timeout — bump it. (Hobby caps functions lower than this;
@@ -32,13 +33,13 @@ export async function POST(request: Request) {
       try {
         send({ type: "status", message: "Asking the model to write a script…" });
 
-        const { object } = await generateObject({
-          model: process.env.AI_MODEL ?? "openai/gpt-4o-mini",
-          schema: scriptSchema,
+        const { text } = await generateText({
+          model: process.env.AI_MODEL ?? "inclusionai/ling-3.0-flash-free",
           system: [
             "You write small, self-contained scripts that fulfil the user's coding request.",
+            "Respond with ONLY a JSON object (no markdown, no extra text). Use this exact format:",
+            '{"language":"node"|"python","filename":"script.js|script.py","code":"...","summary":"..."}',
             "Prefer Node.js unless Python is clearly a better fit for the task.",
-            "(Soft constraint: defaults to Node for fast provisioning; we don't validate post-generation.)",
             "Keep the script under 60 lines. Print results to stdout with console.log or print().",
             "The script must not read from or write to the network, and must not access",
             "the filesystem outside its own working directory. It runs unattended — do not",
@@ -46,6 +47,15 @@ export async function POST(request: Request) {
           ].join(" "),
           prompt,
         });
+
+        let object;
+        try {
+          object = scriptSchema.parse(JSON.parse(text));
+        } catch (parseError) {
+          throw new Error(
+            `Failed to parse model response as JSON: ${parseError instanceof Error ? parseError.message : "Unknown error"}`
+          );
+        }
 
         send({
           type: "code",
