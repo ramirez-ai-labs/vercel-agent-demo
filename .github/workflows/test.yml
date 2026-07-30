@@ -5,6 +5,7 @@ on:
     branches: [main, 'refine/**', 'docs/**']
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   test:
@@ -12,6 +13,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Debug - Check files
+        run: |
+          echo "Checking app directory:"
+          ls -la app/
+          echo "Checking if layout.tsx exists:"
+          [ -f app/layout.tsx ] && echo "✓ app/layout.tsx found" || echo "✗ app/layout.tsx NOT found"
 
       - uses: actions/setup-node@v4
         with:
