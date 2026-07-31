@@ -93,17 +93,17 @@ What the sandbox **allows** vs. **blocks**:
 graph TB
     SandboxVM["Firecracker Microvm<br/>(app/api/agent/route.ts)"]
     
-    Allowed["✅ Allowed"]
-    Blocked["❌ Blocked"]
+    Allowed["Allowed"]
+    Blocked["Blocked"]
     
-    Allowed -->|CPU + RAM| Math["Math operations"]
-    Allowed -->|Filesystem| Work["Read/write in /tmp"]
-    Allowed -->|Node/Python| Run["Node.js + Python 3"]
+    Allowed -->|"CPU + RAM"| Math["Math operations"]
+    Allowed -->|"Filesystem"| Work["Read/write in /tmp"]
+    Allowed -->|"Node/Python"| Run["Node.js + Python 3"]
     
-    Blocked -->|Network| NoNet["No egress (DNS/TCP/UDP)"]
-    Blocked -->|Filesystem| NoFS["No access outside /tmp"]
-    Blocked -->|stdin| NoInput["No interactive input"]
-    Blocked -->|Walls| System["No access to host kernel/services"]
+    Blocked -->|"Network"| NoNet["No egress (DNS/TCP/UDP)"]
+    Blocked -->|"Filesystem"| NoFS["No access outside /tmp"]
+    Blocked -->|"stdin"| NoInput["No interactive input"]
+    Blocked -->|"Walls"| System["No access to host kernel/services"]
     
     SandboxVM --> Allowed
     SandboxVM --> Blocked
