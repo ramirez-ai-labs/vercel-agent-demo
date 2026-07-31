@@ -73,15 +73,15 @@ graph LR
 
 ```mermaid
 sequenceDiagram
-    Browser->>API: POST { prompt }
-    Note over API: Call generateText()
-    API->>Browser: { "type": "status", "message": "Asking model..." }
-    Note over API: Parse JSON response
-    API->>Browser: { "type": "code", "language": "node", "filename": "...", "code": "...", "summary": "..." }
-    API->>Browser: { "type": "status", "message": "Starting sandbox..." }
-    Note over API: Create sandbox & run script
-    API->>Browser: { "type": "result", "exitCode": 0, "stdout": "...", "stderr": "" }
-    API->>Browser: { "type": "done" }
+    Browser->>APIRoute: POST { prompt }
+    Note over APIRoute: Call generateText()
+    APIRoute->>Browser: { "type": "status", "message": "Asking model..." }
+    Note over APIRoute: Parse JSON response
+    APIRoute->>Browser: { "type": "code", "language": "node", "filename": "...", "code": "...", "summary": "..." }
+    APIRoute->>Browser: { "type": "status", "message": "Starting sandbox..." }
+    Note over APIRoute: Create sandbox & run script
+    APIRoute->>Browser: { "type": "result", "exitCode": 0, "stdout": "...", "stderr": "" }
+    APIRoute->>Browser: { "type": "done" }
     Note over Browser: Render each event as it arrives
 ```
 
@@ -91,7 +91,7 @@ What the sandbox **allows** vs. **blocks**:
 
 ```mermaid
 graph TB
-    Sandbox["Firecracker Microvm<br/>(app/api/agent/route.ts)"]
+    SandboxVM["Firecracker Microvm<br/>(app/api/agent/route.ts)"]
     
     Allowed["✅ Allowed"]
     Blocked["❌ Blocked"]
@@ -105,8 +105,8 @@ graph TB
     Blocked -->|stdin| NoInput["No interactive input"]
     Blocked -->|Walls| System["No access to host kernel/services"]
     
-    Sandbox --> Allowed
-    Sandbox --> Blocked
+    SandboxVM --> Allowed
+    SandboxVM --> Blocked
 ```
 
 ## The Two Critical Vercel Pieces
