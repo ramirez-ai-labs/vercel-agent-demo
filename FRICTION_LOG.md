@@ -35,7 +35,20 @@ React 19 support yet. Workaround: use `npm install --legacy-peer-deps` in CI and
 
 Note: This will resolve itself once Testing Library ships official React 19 support (likely v15.1 or v16).
 
-## 6. [Add after live deploy] First real failure case
-Note the first time the model generates something that fails inside the sandbox —
-non-zero exit, unexpected stderr, or a runtime the schema didn't account for. What did
-the error surface look like on the client, and was it enough to debug from?
+## 6. AI Gateway free tier models return plain text, not structured output
+
+Deployed the app and immediately hit 400 errors: the free-tier model (Novita AI's 
+Ling-3.0-Flash) returned text instead of JSON. The route was expecting structured 
+output and failing on `JSON.parse()`. 
+
+**The fix:** Update route to use `generateText` instead of `generateObject`, then 
+manually parse the response and validate with Zod. This works with free tier, but 
+trades guaranteed schema compliance for universal compatibility.
+
+**Why it matters:** The docs don't clearly flag that structured output (`generateObject`) 
+requires premium models. Early adopters building on free tier hit this immediately. 
+Worth a docs update: "generateObject requires [list of models], use generateText 
++ manual parsing for broader compatibility."
+
+**What actually shipped:** See `app/api/agent/route.ts` lines 36–53. The system prompt 
+explicitly asks for JSON; the route catches parse failures and streams error events.
